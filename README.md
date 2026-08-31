@@ -2,55 +2,131 @@
 
 ## Overview
 
-This project is a Windows security monitoring lab built to practice log collection, threat detection, incident investigation, and security event analysis.
+This project is a Windows security monitoring lab built to practice log collection, threat detection, and security event investigation.
 
-The lab uses Splunk, Sysmon, Windows Event Logs, and PowerShell to collect and investigate authentication, process, and account activity in a controlled virtual environment.
+I configured Splunk Enterprise and Sysmon on a Windows 11 virtual machine to collect and analyze Windows Security and endpoint process telemetry. I then generated controlled authentication failures and PowerShell activity and used Splunk searches to investigate the resulting events.
 
-This project is currently in progress and will be updated as detections and investigation scenarios are completed.
+## Lab Environment
 
-## Technologies
-
-- Splunk
-- Sysmon
+- Windows 11 Pro
+- Oracle VirtualBox
+- Splunk Enterprise
+- Microsoft Sysmon
 - Windows Event Logs
 - PowerShell
-- Windows 11
-- VirtualBox
 - MITRE ATT&CK
 
-## Planned Security Scenarios
+**Endpoint:** `CLIENT01.marcolab.local`
 
-### Failed Authentication Detection
+## Sysmon Configuration
 
-Generate controlled failed logon attempts and use Windows authentication events in Splunk to identify repeated login failures and investigate the affected account and workstation.
+I installed Microsoft Sysmon on `CLIENT01` to provide additional Windows endpoint telemetry.
 
-### PowerShell Activity Detection
+Sysmon records detailed system activity such as process creation and stores the events in:
 
-Generate safe PowerShell activity and use Sysmon process telemetry to identify PowerShell execution and analyze related process information.
+`Microsoft-Windows-Sysmon/Operational`
 
-### Account and Privilege Changes
+I verified that the Sysmon service was running and generated harmless PowerShell activity for testing.
 
-Generate controlled account or security-group changes and use Windows security events to investigate who made the change, which account was affected, and when the activity occurred.
+The PowerShell command used during testing was:
 
-## Incident Investigation
+`Get-Process | Select-Object -First 5`
 
-Security events generated during the lab will be investigated by correlating Windows Event Logs and Sysmon telemetry in Splunk.
+Sysmon recorded the PowerShell process as **Event ID 1 - Process Create**.
 
-Relevant activity will also be mapped to MITRE ATT&CK techniques where applicable.
+![Sysmon PowerShell Event](screenshots/01-sysmon-powershell-event.png)
 
-## Screenshots
+## Splunk Log Collection
 
-Screenshots and investigation evidence will be added as each scenario is completed.
+I installed Splunk Enterprise locally on `CLIENT01` and configured it to ingest two Windows event sources:
+
+- `WinEventLog:Security`
+- `WinEventLog:Microsoft-Windows-Sysmon/Operational`
+
+I verified ingestion by counting events from each source in Splunk.
+
+![Splunk Log Ingestion](screenshots/02-splunk-log-ingestion.png)
+
+This provided both Windows authentication events and detailed Sysmon endpoint telemetry for investigation.
+
+## PowerShell Activity Detection
+
+I used Splunk to search Sysmon process creation events for PowerShell activity.
+
+The search isolated the test command generated earlier:
+
+`Get-Process | Select-Object -First 5`
+
+The result identified the timestamp, endpoint, and PowerShell command line recorded by Sysmon.
+
+![Splunk PowerShell Detection](screenshots/03-splunk-powershell-detection.png)
+
+### MITRE ATT&CK Mapping
+
+The PowerShell activity was mapped to:
+
+**T1059.001 - Command and Scripting Interpreter: PowerShell**
+
+This demonstrated how endpoint process telemetry can be searched to identify command-line activity during an investigation.
+
+## Failed Authentication Detection
+
+I generated controlled failed authentication attempts for a test domain account using incorrect credentials.
+
+Windows recorded the failed logons as:
+
+**Event ID 4625 - An account failed to log on**
+
+I searched the Windows Security logs in Splunk and identified the failed authentication events generated during the test.
+
+The events included information such as:
+
+- Timestamp
+- Source computer
+- Account information
+- Logon type
+- Failure reason
+
+![Splunk Failed Logons](screenshots/04-splunk-failed-logons.png)
+
+### MITRE ATT&CK Mapping
+
+Repeated password-guessing activity was mapped to:
+
+**T1110 - Brute Force**
+
+The activity in this lab was intentionally generated in a controlled environment for security monitoring practice.
+
+## Investigation Workflow
+
+The lab followed a basic detection and investigation workflow:
+
+1. Generate controlled endpoint or authentication activity.
+2. Collect Windows Security and Sysmon logs.
+3. Ingest the event data into Splunk.
+4. Search for relevant authentication and process activity.
+5. Review timestamps, endpoints, accounts, processes, and failure information.
+6. Map relevant behavior to MITRE ATT&CK techniques.
 
 ## Skills Practiced
 
+- Splunk Enterprise
+- Sysmon
+- Windows Event Logs
 - Security Monitoring
 - Log Analysis
-- Windows Event Logs
-- Splunk
-- Sysmon
 - PowerShell
 - Authentication Analysis
-- Incident Response
+- Endpoint Telemetry
+- Incident Investigation
 - Event Correlation
 - MITRE ATT&CK
+- Windows Security Event ID 4625
+- Sysmon Event ID 1
+- VirtualBox
+
+## What I Learned
+
+This project helped me understand how endpoint and authentication telemetry can be collected and investigated using a security monitoring platform.
+
+I gained hands-on experience configuring Splunk data inputs, collecting Sysmon and Windows Security events, searching endpoint process activity, investigating failed authentication attempts, and connecting observed behavior to MITRE ATT&CK techniques.
